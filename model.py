@@ -3,6 +3,7 @@ import math
 import logging
 
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 
 class Agent:
@@ -66,11 +67,6 @@ class Zone:
         # list comprehension
         return sum([inhabitant.agreeableness for inhabitant in self.inhabitants]) / self.population
 
-    def average_income(self):
-        if not self.inhabitants:
-            return 0
-        return sum([inhabitant.income for inhabitant in self.inhabitants]) / self.population
-
     @property
     def width(self):
         return abs(self.corner2.longitude - self.corner1.longitude) * self.EARTH_RADIUS_KILOMETERS
@@ -127,18 +123,24 @@ class BaseGraph:
 
     def show(self, zones):
         x_values, y_values = self.xy_values(zones)
-        plt.plot(x_values, y_values, '.')
+        self.plot(x_values, y_values)
+
         plt.xlabel(self.x_label)
         plt.ylabel(self.y_label)
         plt.title(self.title)
         plt.grid(self.show_grid)
         plt.show()
 
+    def plot(self, x_values, y_values):
+        """Override this method to create different kinds of graphs, such as histograms"""
+        # http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.plot
+        plt.plot(x_values, y_values, '.')
+
 
 class AgreeablenessGraph(BaseGraph):
 
     def __init__(self):
-        super().__init__()
+        super(AgreeablenessGraph, self).__init__()
         self.title = 'Nice people live in the countryside'
         self.x_label = 'population density'
         self.y_label = 'agreeableness'
@@ -152,14 +154,21 @@ class AgreeablenessGraph(BaseGraph):
 class IncomeGraph(BaseGraph):
 
     def __init__(self):
-        super().__init__()
-        self.title = 'rich people live in the cities'
-        self.x_label = 'population density'
+        super(IncomeGraph, self).__init__()
+        self.title = 'Older people have more money'
+        self.x_label = 'age'
         self.y_label = 'income'
 
     def xy_values(self, zones):
-        x_values = [zone.population_density() for zone in zones]
-        y_values = [zone.average_income() for zone in zones]
+        income_by_age = defaultdict(float)
+        population_by_age= defaultdict(int)
+        for zone in zones:
+            for inhabitant in zone.inhabitants:
+                income_by_age[inhabitant.age] += inhabitant.income
+                population_by_age[inhabitant.age] += 1
+
+        x_values = range(0, 100)
+        y_values = [income_by_age[age] / (population_by_age[age] or 1) for age in x_values]
         return x_values, y_values
 
 
@@ -180,7 +189,9 @@ def main():
     income_graph = IncomeGraph()
     income_graph.show(Zone.ZONES)
 
-main()
+
+if __name__ == "__main__":
+    main()
 
 # L'encapsulation est un mot qui illustre deux concepts :
 #   le fait que les attributs et les méthodes d'un objet lui sont spécifiquement associés.
